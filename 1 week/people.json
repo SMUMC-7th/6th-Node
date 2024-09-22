@@ -1,0 +1,24 @@
+[
+  {
+    "firstName": "Rhoda",
+    "lastName": "Koss",
+    "fullName": "Jeannette Jacobs",
+    "jobTitle": "Product Factors Consultant",
+    "sex": "male",
+    "id": 2
+  },
+  {
+    "firstName": "Jo",
+    "lastName": "Flatley",
+    "fullName": "Elbert Schroeder",
+    "jobTitle": "National Division Technician",
+    "sex": "male",
+    "id": 3
+  },
+  {
+    "name": "Jun",
+    "age": 24,
+    "email": "good.google.com",
+    "id": 4
+  }
+]
