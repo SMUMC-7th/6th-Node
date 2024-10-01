@@ -3,7 +3,7 @@ import path from "path";
 import http from "http";
 import url from "url";
 
-// people.json 경로를 상수화
+// people.json 경로를 상수화 d
 const dataFilePath = path.resolve("data/people.json");
 
 // 데이터 읽기 함수
