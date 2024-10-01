@@ -1,0 +1,26 @@
+[
+    {
+      "Id" : "1",
+      "name" : "smartphone",
+      "price" : "500000",
+      "category" : "electronic devices"
+    },
+    {
+        "Id" : "2",
+        "name" : "laptop",
+        "price" : "2000000",
+        "category" : "electronic devices"
+    },
+    {
+        "Id" : "3",
+        "name" : "book",
+        "price" : "19800",
+        "category" : "literature"
+    },
+    {
+        "Id" : "4",
+        "name" : "doll",
+        "price" : "15000",
+        "category" : "toy"
+    }
+]
