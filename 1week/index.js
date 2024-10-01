@@ -1,93 +1,128 @@
-import { promises as fs } from 'fs';
-import path from 'path';
-import http from 'http';
+import { promises as fs } from "fs";
+import path from "path";
+import http from "http";
+import url from "url";
 
-const dataFilePath = path.resolve('product.json');
+// people.json 경로를 상수화 d
+const dataFilePath = path.resolve("data/people.json");
 
+// 데이터 읽기 함수
 const readData = async () => {
-  const data = await fs.readFile(dataFilePath, 'utf-8');
-  return JSON.parse(data);
-};
-
-const writeData = async (data) => {
-  await fs.writeFile(dataFilePath, JSON.stringify(data, null, 2));
-};
-
-const server = http.createServer(async (req, res) => {
-  const { url, method } = req;
-  if (method === 'GET' && url === '/product') {
-    try {
-      const data = await readData();
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify(data));
-    } catch (error) {
-      res.writeHead(500, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ error: error.message }));
-    }
-  } else if(req.method === 'POST' && parsedUrl.path === '/product'){
-    handlePostRequest(req, res);
-  } else if(req.method === 'PUT' && parsedUrl.path.startsWith('/product/')){
-    handlePutRequest(req, res, parsedUrl);
-  } else if(req.method === 'DELETE' && parsedUrl.path.startsWith('/product/')){
-    handleDeleteRequest(req, res, parsedUrl);
-  } else {
-    sendResponse(res, 404, CONTENT_TYPE_JSON, {error : 'Method not allowed'});
+  try {
+    const data = await fs.readFile(dataFilePath, "utf-8");
+    return JSON.parse(data);
+  } catch (error) {
+    throw new Error("Failed to read data");
   }
-});
+};
 
-const sendResponse = (res, statusCode, contentType, data) => {
-  res.writeHead(statusCode, contentType);
+// 데이터 쓰기 함수
+const writeData = async data => {
+  try {
+    await fs.writeFile(dataFilePath, JSON.stringify(data, null, 2));
+  } catch (error) {
+    throw new Error("Failed to write data");
+  }
+};
+
+// 응답 전송 함수
+const sendResponse = (res, statusCode, data) => {
+  res.writeHead(statusCode, { "Content-Type": "application/json" });
   res.end(JSON.stringify(data));
 };
 
-const handlePostRequest = (req,res) => {
-  let requestBody = '';
-
-  req.on('data', (chunk) => {
-    requestBody += chunk;
-  });
-
-  req.on('end', () => {
-    const product = JSON.parse(requstBody);
-    product.id = product.length + 1;
-    products.push(product);
-
-    sendResponse(res, 201, CONTENT_TYPE_JSON, product);
+// POST 요청 처리 함수
+const handlePost = async (req, res) => {
+  let requestBody = "";
+  req.on("data", chunk => (requestBody += chunk));
+  req.on("end", async () => {
+    try {
+      const newPerson = JSON.parse(requestBody);
+      const people = await readData();
+      newPerson.id = people.length ? people[people.length - 1].id + 1 : 1;
+      people.push(newPerson);
+      await writeData(people);
+      sendResponse(res, 201, newPerson);
+    } catch {
+      sendResponse(res, 400, { error: "Invalid JSON" });
+    }
   });
 };
 
-const handlePutRequest = (req, res, parsedUrl) => {
-  req.on('data', (chunk) => {
-    requestBody += chunk;
-  });
+// PUT 요청 처리 함수
+const handlePut = async (req, res) => {
+  let requestBody = "";
+  req.on("data", chunk => (requestBody += chunk));
+  req.on("end", async () => {
+    try {
+      const updatedPerson = JSON.parse(requestBody);
+      const parsedUrl = url.parse(req.url, true);
+      const personId = parseInt(parsedUrl.path.split("/").pop(), 10);
+      const people = await readData();
+      const personIndex = people.findIndex(p => p.id === personId);
 
-  req.on('end', () => {
-    const updatedProduct = JSON.parse(requestBody);
-    const productId = parseInt(parsedUrl.path.split('/').pop());
-    const productIndex = products.findIndex(p => p.id === productId);
-
-    if (productIndex !== -1) {
-      products[productIndex] = { ...products[productIndex], ...updatedProduct, id: productId };
-      sendResponse(res, 200, CONTENT_TYPE_JSON, products[productIndex]);
-    } else {
-      sendResponse(res, 404, CONTENT_TYPE_JSON, { error: 'Product not found' });
+      if (personIndex !== -1) {
+        people[personIndex] = {
+          ...people[personIndex],
+          ...updatedPerson,
+          id: personId,
+        };
+        await writeData(people);
+        sendResponse(res, 200, people[personIndex]);
+      } else {
+        sendResponse(res, 404, { error: "Person not found" });
+      }
+    } catch {
+      sendResponse(res, 400, { error: "Invalid JSON" });
     }
   });
-}
+};
 
-const handleDeleteRequest = (req, res, parsedUrl) => {
-  const productId = parseInt(parsedUrl.path.split('/').pop());
-  const productIndex = products.findIndex(p => p.id === productId);
+// DELETE 요청 처리 함수
+const handleDelete = async (req, res) => {
+  const parsedUrl = url.parse(req.url, true);
+  const personId = parseInt(parsedUrl.path.split("/").pop(), 10);
+  const people = await readData();
+  const personIndex = people.findIndex(p => p.id === personId);
 
-  if (productIndex !== -1) {
-    const deletedProduct = products.splice(productIndex, 1)[0];
-    sendResponse(res, 200, CONTENT_TYPE_JSON, deletedProduct);
+  if (personIndex !== -1) {
+    const [deletedPerson] = people.splice(personIndex, 1);
+    await writeData(people);
+    sendResponse(res, 200, deletedPerson);
   } else {
-    sendResponse(res, 404, CONTENT_TYPE_JSON, { error: 'Product not found' });
+    sendResponse(res, 404, { error: "Person not found" });
   }
 };
 
-server.listen(3000, () => {
-  console.log('서버 실행중');
+// 기본 응답 처리 함수
+const handleNotFound = res => {
+  sendResponse(res, 404, { error: "Not Found" });
+};
+
+// 서버 생성 및 요청 라우팅
+const server = http.createServer(async (req, res) => {
+  const { url: reqUrl, method } = req;
+
+  if (method === "GET" && reqUrl === "/people") {
+    try {
+      const people = await readData();
+      sendResponse(res, 200, people);
+    } catch (error) {
+      sendResponse(res, 500, { error: error.message });
+    }
+  } else if (method === "POST" && reqUrl === "/people") {
+    handlePost(req, res);
+  } else if (method === "PUT" && reqUrl.startsWith("/people/")) {
+    handlePut(req, res);
+  } else if (method === "DELETE" && reqUrl.startsWith("/people/")) {
+    handleDelete(req, res);
+  } else {
+    handleNotFound(res);
+  }
 });
 
+// 서버 시작
+const PORT = 8080;
+server.listen(PORT, () => {
+  console.log(`Server is running on http://localhost:${PORT}`);
+});
